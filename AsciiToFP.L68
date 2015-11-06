@@ -1,0 +1,152 @@
+00001000 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.15.04
+Created On: 11/5/15 10:30:36 PM
+
+00000000                             1  *-----------------------------------------------------------
+00000000                             2  ************ Assumptions being made:
+00000000                             3  *               number has at least one digit to the left and right of decimal
+00000000                             4  *               number contains a decimal
+00000000                             5  *               number is greater than 1 (extra work required to have negative exp)
+00000000                             6  * Written by :
+00000000                             7  * Date       :
+00000000                             8  * Description:
+00000000                             9  *-----------------------------------------------------------
+00001000                            10      ORG    $1000
+00001000                            11      
+00001000  =0000000D                 12  CR       EQU      $0D               Carriage_return 
+00001000                            13  
+00001000                            14      
+00001000                            15  START:                  ; first instruction of program
+00001000                            16  
+00001000  =00001000                 17  AtoBCD  EQU *
+00001000  11FC 0037 4100            18          MOVE.B  #'7', $4100
+00001006  11FC 002E 4101            19          MOVE.B  #'.', $4101
+0000100C  11FC 0031 4102            20          MOVE.B  #'1', $4102
+00001012  11FC 0032 4103            21          MOVE.B  #'2', $4103
+00001018  11FC 0035 4104            22          MOVE.B  #'5', $4104
+0000101E  11F8 000D 4105            23          MOVE.B  CR,   $4105
+00001024  41F8 4000                 24          LEA.L   $4000,A0
+00001028  4298                      25          CLR.L   (A0)+         Clear $4000 to $400B
+0000102A  4298                      26          CLR.L   (A0)+
+0000102C  4290                      27          CLR.L   (A0)
+0000102E  4280                      28          CLR.L   D0              incoming ASCII (working register)
+00001030  4281                      29          CLR.L   D1              stores threshold for finding right side 1's
+00001032  4282                      30          CLR.L   D2              left of decimal (base 10) then entire mantissa
+00001034  4283                      31          CLR.L   D3              right of decimal (base 10)
+00001036  4284                      32          CLR.L   D4              counter (for size of decimal, looping)
+00001038  4285                      33          CLR.L   D5              completed FP number
+0000103A  4286                      34          CLR.L   D6              keep track of number of shifts to left register
+0000103C  4287                      35          CLR.L   D7              holds final exponent number
+0000103E  41F8 4100                 36          LEA.L   $4100,A0     A0 points to line buffer  
+00001042  1018                      37          MOVE.B  (A0)+,D0          Read ASCII character from line buffer
+00001044  B03C 002D                 38          CMP.B   #'-',D0       Is the first character in the FP string a minus?
+00001048  6600 0008                 39          BNE     DECI          if not a minus then skip adding in minus bit
+0000104C  2A3C 80000000             40          MOVE.l  #$80000000,D5    make msb high in D5.L indicating negative 
+00001052  B03C 002E                 41  DECI    CMP.B   #'.',D0         Is the first character a decimal?
+00001056  6600 0014                 42          BNE     FIRST            If it is not than convert left side to decimal
+0000105A  6000 0040                 43          BRA     RIGHT            Else jump to right side conversion process
+0000105E                            44          
+0000105E  1018                      45  LOOP1   MOVE.B  (A0)+,D0        When looping receive next char        
+00001060  B03C 002E                 46          CMP.B   #'.',D0         Is the next char a decimal?
+00001064  6700 0010                 47          BEQ     EXP            If so then left side is done go to right
+00001068  C5FC 000A                 48          MULS    #10,D2          else multiply current left by 10 (to make room)
+0000106C  0480 00000030             49  FIRST   SUB.L   #48,D0          ascii to integer
+00001072  D480                      50          ADD.L   D0,D2           add next decimal digit to left reg.
+00001074  60E8                      51          BRA     LOOP1           keep looping until decimal is reached
+00001076                            52          
+00001076  4280                      53  EXP     CLR.L   D0              clear working register
+00001078  2002                      54          MOVE.L  D2,D0           move into working register
+0000107A  5284                      55  LOOP3   ADD.L   #1,D4           add 1 to counter register
+0000107C  E388                      56          LSL.L   #1,D0           rotate bits left to find msb that is set
+0000107E  6500 0004                 57          BCS     SKIP1           MSB found need to skip
+00001082  60F6                      58          BRA     LOOP3           keep rotating until found
+00001084  7E20                      59  SKIP1   MOVE.L  #32,D7
+00001086  9E44                      60          SUB     D4,D7           find 32-count = location of msb set.
+00001088  4280                      61          CLR.L   D0
+0000108A  123C 0001                 62          MOVE.B  #1,D1           move initial bit into D1
+0000108E  EFA9                      63          LSL.L   D7,D1           rotate bit left D7 times
+00001090  9441                      64          SUB     D1,D2           remove msb set
+00001092  4284                      65          CLR.L   D4
+00001094  0647 007F                 66          ADD     #127,D7
+00001098  4281                      67          CLR.L   D1
+0000109A  4280                      68          CLR.L   D0
+0000109C                            69          
+0000109C  1018                      70  RIGHT   MOVE.B  (A0)+,D0        When looping receive next char        
+0000109E  B038 000D                 71          CMP.B   CR,D0          Is the next char a carriage return?
+000010A2  6700 0010                 72          BEQ     THRESH          If so then right side is done go to finding threshold
+000010A6  0440 0030                 73          SUB     #48,D0          Convert to integer
+000010AA  C7FC 000A                 74          MULS    #10,D3          else multiply current right by 10 (to make room)
+000010AE  D680                      75          ADD.L   D0,D3           add next decimal digit to right reg.
+000010B0  5284                      76          ADD.L   #1,D4           Keep track of number of digits to the right
+000010B2  60E8                      77          BRA     RIGHT           keep looping until Carriage Return is reached
+000010B4                            78  
+000010B4  7201                      79  THRESH  MOVE.L  #1,D1           To start move 1 into D1
+000010B6  C3FC 000A                 80  LOOP4   MULS    #10,D1          Increase threshold by 10 times
+000010BA  5344                      81          SUB     #1,D4           decrease counter
+000010BC  B83C 0000                 82          CMP.B   #0,D4           check if counter has reached 0
+000010C0  6700 0004                 83          BEQ     CONV            done multiplying to acheive threshold value
+000010C4  60F0                      84          BRA     LOOP4           Keep going until threshold found
+000010C6                            85  
+000010C6  E38B                      86  CONV    LSL.L   #1,D3           Multiply right number by 2
+000010C8  B283                      87          CMP.L   D3,D1           check if threshold is less than D3
+000010CA  6300 0006                 88          BLS     SKIP2           skip adding a shift if it is and go to inserting 1
+000010CE  5206                      89          ADD.B   #1,D6           increment number of shifts before 1 is added
+000010D0  60F4                      90          BRA     CONV            continue converting
+000010D2                            91  
+000010D2  5206                      92  SKIP2   ADD.B   #1,D6           make room for the 1 after 0's
+000010D4  EDAA                      93          LSL.L   D6,D2           shift left of the decimal place numbers correct # of times
+000010D6  84BC 00000001             94          OR.L    #$1,D2          make lsb 1
+000010DC  4286                      95          CLR.L   D6              reset shift counter
+000010DE  9681                      96          SUB.L   D1,D3           subtract off threshold amount
+000010E0  B6BC 00000000             97          CMP.L   #0,D3           if 0 is reached than completed combining left and right side
+000010E6  6700 0004                 98          BEQ     COMB            
+000010EA  60DA                      99          BRA     CONV            or continue converting
+000010EC                           100          
+000010EC  E18F                     101  COMB    LSL.L   #8,D7
+000010EE  E18F                     102          LSL.L   #8,D7
+000010F0  EF8F                     103          LSL.L   #7,D7
+000010F2  8A87                     104          OR.L    D7,D5
+000010F4  7600                     105          MOVE.L  #0,D3
+000010F6  E38A                     106  SHIFT   LSL.L   #1,D2           rotate bits left to find msb that is set
+000010F8  6500 0006                107          BCS     MANT           MSB found need to skip
+000010FC  5283                     108          ADD.L   #1,D3
+000010FE  60F6                     109          BRA     SHIFT
+00001100  E08A                     110  MANT    LSR.L   #8,D2
+00001102  E48A                     111          LSR.L   #2,D2
+00001104  5B83                     112          SUB.L   #5,D3
+00001106  7801                     113          MOVE.L  #1,D4
+00001108  E7AC                     114          LSL.L   D3,D4
+0000110A  8484                     115          OR.L    D4,D2
+0000110C  8A82                     116          OR.L    D2,D5
+0000110E                           117  
+0000110E  FFFF FFFF                118  EXIT    SIMHALT             ; halt simulator
+00001112                           119  
+00001112  =0000000D                120  CR       EQU      $0D               Carriage_return 
+00001112                           121  
+00001112                           122      END    START        ; last line of source
+
+No errors detected
+No warnings generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+ATOBCD              1000
+COMB                10EC
+CONV                10C6
+CR                  D
+DECI                1052
+EXIT                110E
+EXP                 1076
+FIRST               106C
+LOOP1               105E
+LOOP3               107A
+LOOP4               10B6
+MANT                1100
+RIGHT               109C
+SHIFT               10F6
+SKIP1               1084
+SKIP2               10D2
+START               1000
+THRESH              10B4

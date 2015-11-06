@@ -1,0 +1,71 @@
+TITLE ABC Drivers select signals for U15, U16 & U17 and S100_READ, S100_WRITE
+PATTERN 
+REVISION 0
+AUTHOR Marcus Motill
+COMPANY
+DATE 11/3/15
+
+CHIP ABC_GAL PALCE22V10 ; Device not selected
+
+;---------------------------------- PIN Declarations ---------------
+
+Pin 1 LDS				;ACTIVE LOW
+Pin 2 UDS				;ACTIVE LOW
+PIN 3 A23				;ADDRESS LINE 23
+PIN 4 A22				;ADDRESS LINE 22
+PIN 5 A21				;ADDRESS LINE 21
+PIN 6 A20				;ADDRESS LINE 20
+PIN 7 A19				;ADDRESS LINE 19
+PIN 8 A18				;ADDRESS LINE 18
+PIN 9 A17				;ADDRESS LINE 17
+PIN 10 GND				;GROUND (NOT NEEDED)
+
+PIN 11 A16				;ADDRESS LINE 16
+PIN 12 CS 				;CHIP SELECT (ACTIVE LOW)
+Pin 13 A15				;ADDRESS LINE 15
+PIN 14 A14				;ADDRESS LINE 14
+PIN 15 A13				;ADDRESS LINE 13
+PIN 16 FC0				;FUNCTION CODE 0
+PIN 17 FC1				;FUNCTION CODE 1
+PIN 18 FC2				;FUNCTION CODE 2
+PIN 19 DS 				;DATA SELECT (ACTIVE LOW, MUST BE ACTIVE)
+PIN 20 VCC				;POWER (NOT NEEDED)
+
+
+
+;----------------------------------- Boolean Equation Segment ------
+
+EQUATIONS
+
+;if address mapped is $FF0000 and FC0, FC1, FC2 match our specifications then
+;set CS low
+
+;look at schematic to set DS low always
+
+AND1 = A23 * A22
+AND2 = A21 * A20
+AND3 = AND1 * AND2
+AND4 = A19 * A18
+AND5 = A17 * A16
+AND6 = AND4 * AND5
+AND7 = A15 * A14
+AND8 = AND6 * AND7
+
+AND9 = A13 * FC0		;CPU MODE
+AND10 = FC1 * FC2
+AND11 = AND9 * AND10
+
+;AND9 = A13 * /FC0		;SUPERVISON MODE
+;AND10 = FC1 * FC2
+;AND11 = AND9 * AND10
+
+;AND9 = A13 * /FC0		;USER MODE
+;AND10 = FC1 * /FC2
+;AND11 = AND9 * AND10
+
+/AND12 = AND8 * AND11
+
+
+
+
+
